@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="视频设置">
+
+        <ListPreference
+            android:key="video_quality"
+            android:title="视频质量"
+            android:summary="设置录制视频的分辨率"
+            android:entries="@array/video_quality_entries"
+            android:entryValues="@array/video_quality_values"
+            android:defaultValue="1080p" />
+
+        <ListPreference
+            android:key="video_fps"
+            android:title="帧率"
+            android:summary="设置视频帧率"
+            android:entries="@array/video_fps_entries"
+            android:entryValues="@array/video_fps_values"
+            android:defaultValue="30" />
+
+        <ListPreference
+            android:key="segment_duration"
+            android:title="分段时长"
+            android:summary="每个视频片段的时长"
+            android:entries="@array/segment_duration_entries"
+            android:entryValues="@array/segment_duration_values"
+            android:defaultValue="60" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="存储设置">
+
+        <SeekBarPreference
+            android:key="min_free_space"
+            android:title="最小保留空间"
+            android:summary="自动清理旧视频时保留的最小存储空间"
+            android:defaultValue="500"
+            android:min="100"
+            android:max="5000"
+            app:showSeekBarValue="true" />
+
+        <SwitchPreference
+            android:key="auto_cleanup"
+            android:title="自动清理"
+            android:summary="存储空间不足时自动删除旧视频"
+            android:defaultValue="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="GPS设置">
+
+        <SwitchPreference
+            android:key="gps_enabled"
+            android:title="启用GPS"
+            android:summary="在视频中嵌入GPS信息"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="show_speed"
+            android:title="显示速度"
+            android:summary="在界面上显示当前速度"
+            android:defaultValue="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="碰撞检测">
+
+        <SwitchPreference
+            android:key="collision_detection"
+            android:title="启用碰撞检测"
+            android:summary="检测到碰撞时自动保护视频"
+            android:defaultValue="true" />
+
+        <SeekBarPreference
+            android:key="collision_sensitivity"
+            android:title="灵敏度"
+            android:summary="碰撞检测的灵敏度"
+            android:defaultValue="20"
+            android:min="10"
+            android:max="30"
+            app:showSeekBarValue="true" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="系统设置">
+
+        <SwitchPreference
+            android:key="auto_start"
+            android:title="开机自启动"
+            android:summary="系统启动时自动开始录制"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="keep_screen_on"
+            android:title="保持屏幕常亮"
+            android:summary="录制时保持屏幕常亮"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+
+</PreferenceScreen>

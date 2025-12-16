@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#000000"
+    tools:context=".ui.MainActivity">
+
+    <!-- 四分屏预览 -->
+
+    <!-- 左上：前置摄像头 -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview_front"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/preview_rear"
+        app:layout_constraintBottom_toTopOf="@+id/preview_left"
+        app:layout_constraintWidth_percent="0.5"
+        app:layout_constraintHeight_percent="0.6" />
+
+    <!-- 右上：后置摄像头 -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview_rear"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/preview_front"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/preview_right"
+        app:layout_constraintWidth_percent="0.5"
+        app:layout_constraintHeight_percent="0.6" />
+
+    <!-- 左下：左侧摄像头 -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview_left"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@+id/preview_front"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/preview_right"
+        app:layout_constraintBottom_toTopOf="@+id/control_panel"
+        app:layout_constraintWidth_percent="0.5"
+        app:layout_constraintHeight_percent="0.6" />
+
+    <!-- 右下：右侧摄像头 -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/preview_right"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toBottomOf="@+id/preview_rear"
+        app:layout_constraintStart_toEndOf="@+id/preview_left"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/control_panel"
+        app:layout_constraintWidth_percent="0.5"
+        app:layout_constraintHeight_percent="0.6" />
+
+    <!-- 摄像头标签 -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="前"
+        android:textColor="#FFFFFF"
+        android:background="#80000000"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="@+id/preview_front"
+        app:layout_constraintStart_toStartOf="@+id/preview_front"
+        android:layout_margin="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="后"
+        android:textColor="#FFFFFF"
+        android:background="#80000000"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="@+id/preview_rear"
+        app:layout_constraintStart_toStartOf="@+id/preview_rear"
+        android:layout_margin="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="左"
+        android:textColor="#FFFFFF"
+        android:background="#80000000"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="@+id/preview_left"
+        app:layout_constraintStart_toStartOf="@+id/preview_left"
+        android:layout_margin="8dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="右"
+        android:textColor="#FFFFFF"
+        android:background="#80000000"
+        android:padding="4dp"
+        app:layout_constraintTop_toTopOf="@+id/preview_right"
+        app:layout_constraintStart_toStartOf="@+id/preview_right"
+        android:layout_margin="8dp" />
+
+    <!-- 控制面板 -->
+    <LinearLayout
+        android:id="@+id/control_panel"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:orientation="vertical"
+        android:background="#1A1A1A"
+        android:padding="16dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.4">
+
+        <!-- 状态信息 -->
+        <TextView
+            android:id="@+id/tv_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="未录制"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:gravity="center"
+            android:layout_marginBottom="8dp" />
+
+        <!-- GPS信息 -->
+        <TextView
+            android:id="@+id/tv_gps_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="GPS: 等待定位..."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 存储信息 -->
+        <TextView
+            android:id="@+id/tv_storage_info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="存储: 加载中..."
+            android:textColor="#AAAAAA"
+            android:textSize="12sp"
+            android:layout_marginBottom="16dp" />
+
+        <!-- 控制按钮 -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <Button
+                android:id="@+id/btn_start_stop"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="开始录制"
+                android:textSize="16sp"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.AppCompat.Button.Colored" />
+
+            <Button
+                android:id="@+id/btn_protect"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="紧急保护"
+                android:textSize="16sp"
+                android:backgroundTint="#FF5722"
+                android:layout_marginEnd="8dp" />
+
+            <Button
+                android:id="@+id/btn_settings"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="设置"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
