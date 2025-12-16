@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">多摄像头行车记录仪</string>
+    <string name="settings">设置</string>
+    <string name="start_recording">开始录制</string>
+    <string name="stop_recording">停止录制</string>
+    <string name="protect_video">紧急保护</string>
+
+    <!-- 视频质量选项 -->
+    <string-array name="video_quality_entries">
+        <item>720P (HD)</item>
+        <item>1080P (Full HD)</item>
+        <item>2K</item>
+        <item>4K (Ultra HD)</item>
+    </string-array>
+    <string-array name="video_quality_values">
+        <item>720p</item>
+        <item>1080p</item>
+        <item>2k</item>
+        <item>4k</item>
+    </string-array>
+
+    <!-- 帧率选项 -->
+    <string-array name="video_fps_entries">
+        <item>24 FPS</item>
+        <item>30 FPS</item>
+        <item>60 FPS</item>
+    </string-array>
+    <string-array name="video_fps_values">
+        <item>24</item>
+        <item>30</item>
+        <item>60</item>
+    </string-array>
+
+    <!-- 分段时长选项 -->
+    <string-array name="segment_duration_entries">
+        <item>30秒</item>
+        <item>1分钟</item>
+        <item>2分钟</item>
+        <item>3分钟</item>
+        <item>5分钟</item>
+    </string-array>
+    <string-array name="segment_duration_values">
+        <item>30</item>
+        <item>60</item>
+        <item>120</item>
+        <item>180</item>
+        <item>300</item>
+    </string-array>
+</resources>
