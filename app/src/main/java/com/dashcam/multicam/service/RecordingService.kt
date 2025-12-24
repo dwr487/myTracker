@@ -185,15 +185,24 @@ class RecordingService : Service() {
             }
         }
 
-        // 为当前片段生成字幕文件（如果启用）
+        // 处理已录制完成的视频片段
         val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val shouldBurnWatermark = prefs.getBoolean("watermark_burn_to_video", false)
         val shouldGenerateSubtitle = prefs.getBoolean("watermark_generate_subtitle", true)
 
-        if (watermarkManager.getCurrentConfig().enabled && shouldGenerateSubtitle) {
+        if (watermarkManager.getCurrentConfig().enabled) {
             withContext(Dispatchers.IO) {
                 currentSegmentFiles.forEach { (position, file) ->
                     if (file.exists()) {
-                        generateSubtitleForVideo(file, position)
+                        // 烧录水印到视频（如果启用）
+                        if (shouldBurnWatermark) {
+                            burnWatermarkToVideo(file, position)
+                        }
+
+                        // 生成字幕文件（如果启用）
+                        if (shouldGenerateSubtitle && !shouldBurnWatermark) {
+                            generateSubtitleForVideo(file, position)
+                        }
                     }
                 }
             }
@@ -209,6 +218,45 @@ class RecordingService : Service() {
             currentSegmentFiles[position] = file
             recorder.startRecording(file)
             Log.d(TAG, "开始录制新片段: ${position.displayName} -> ${file.name}")
+        }
+    }
+
+    /**
+     * 将水印烧录到视频
+     */
+    private fun burnWatermarkToVideo(videoFile: File, position: CameraPosition) {
+        try {
+            val watermarkData = watermarkManager.getWatermarkData(position)
+            val burner = com.dashcam.multicam.utils.FFmpegWatermarkBurner(
+                watermarkManager.getCurrentConfig()
+            )
+
+            // 创建临时输出文件
+            val tempFile = File(videoFile.parent, "${videoFile.nameWithoutExtension}_temp.mp4")
+
+            Log.d(TAG, "开始烧录水印: ${videoFile.name}")
+
+            // 烧录水印
+            if (burner.burnWatermark(videoFile, tempFile, watermarkData)) {
+                // 替换原文件
+                if (tempFile.exists() && tempFile.length() > 0) {
+                    videoFile.delete()
+                    if (tempFile.renameTo(videoFile)) {
+                        Log.d(TAG, "水印烧录成功: ${videoFile.name}")
+                    } else {
+                        Log.e(TAG, "重命名文件失败")
+                        tempFile.delete()
+                    }
+                } else {
+                    Log.e(TAG, "临时文件无效")
+                    tempFile.delete()
+                }
+            } else {
+                Log.e(TAG, "烧录水印失败: ${videoFile.name}")
+                tempFile.delete()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "烧录水印异常: ${videoFile.name}", e)
         }
     }
 
