@@ -10,52 +10,96 @@
     <!-- 四分屏预览 -->
 
     <!-- 左上：前置摄像头 -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/preview_front"
+    <FrameLayout
+        android:id="@+id/container_front"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/preview_rear"
-        app:layout_constraintBottom_toTopOf="@+id/preview_left"
+        app:layout_constraintEnd_toStartOf="@+id/container_rear"
+        app:layout_constraintBottom_toTopOf="@+id/container_left"
         app:layout_constraintWidth_percent="0.5"
-        app:layout_constraintHeight_percent="0.6" />
+        app:layout_constraintHeight_percent="0.6">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/preview_front"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.dashcam.multicam.ui.WatermarkOverlayView
+            android:id="@+id/watermark_front"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
     <!-- 右上：后置摄像头 -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/preview_rear"
+    <FrameLayout
+        android:id="@+id/container_rear"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/preview_front"
+        app:layout_constraintStart_toEndOf="@+id/container_front"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@+id/preview_right"
+        app:layout_constraintBottom_toTopOf="@+id/container_right"
         app:layout_constraintWidth_percent="0.5"
-        app:layout_constraintHeight_percent="0.6" />
+        app:layout_constraintHeight_percent="0.6">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/preview_rear"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.dashcam.multicam.ui.WatermarkOverlayView
+            android:id="@+id/watermark_rear"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
     <!-- 左下：左侧摄像头 -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/preview_left"
+    <FrameLayout
+        android:id="@+id/container_left"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@+id/preview_front"
+        app:layout_constraintTop_toBottomOf="@+id/container_front"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/preview_right"
+        app:layout_constraintEnd_toStartOf="@+id/container_right"
         app:layout_constraintBottom_toTopOf="@+id/control_panel"
         app:layout_constraintWidth_percent="0.5"
-        app:layout_constraintHeight_percent="0.6" />
+        app:layout_constraintHeight_percent="0.6">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/preview_left"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.dashcam.multicam.ui.WatermarkOverlayView
+            android:id="@+id/watermark_left"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
     <!-- 右下：右侧摄像头 -->
-    <androidx.camera.view.PreviewView
-        android:id="@+id/preview_right"
+    <FrameLayout
+        android:id="@+id/container_right"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintTop_toBottomOf="@+id/preview_rear"
-        app:layout_constraintStart_toEndOf="@+id/preview_left"
+        app:layout_constraintTop_toBottomOf="@+id/container_rear"
+        app:layout_constraintStart_toEndOf="@+id/container_left"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@+id/control_panel"
         app:layout_constraintWidth_percent="0.5"
-        app:layout_constraintHeight_percent="0.6" />
+        app:layout_constraintHeight_percent="0.6">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/preview_right"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <com.dashcam.multicam.ui.WatermarkOverlayView
+            android:id="@+id/watermark_right"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
 
     <!-- 摄像头标签 -->
     <TextView
@@ -65,8 +109,8 @@
         android:textColor="#FFFFFF"
         android:background="#80000000"
         android:padding="4dp"
-        app:layout_constraintTop_toTopOf="@+id/preview_front"
-        app:layout_constraintStart_toStartOf="@+id/preview_front"
+        app:layout_constraintTop_toTopOf="@+id/container_front"
+        app:layout_constraintStart_toStartOf="@+id/container_front"
         android:layout_margin="8dp" />
 
     <TextView
@@ -76,8 +120,8 @@
         android:textColor="#FFFFFF"
         android:background="#80000000"
         android:padding="4dp"
-        app:layout_constraintTop_toTopOf="@+id/preview_rear"
-        app:layout_constraintStart_toStartOf="@+id/preview_rear"
+        app:layout_constraintTop_toTopOf="@+id/container_rear"
+        app:layout_constraintStart_toStartOf="@+id/container_rear"
         android:layout_margin="8dp" />
 
     <TextView
@@ -87,8 +131,8 @@
         android:textColor="#FFFFFF"
         android:background="#80000000"
         android:padding="4dp"
-        app:layout_constraintTop_toTopOf="@+id/preview_left"
-        app:layout_constraintStart_toStartOf="@+id/preview_left"
+        app:layout_constraintTop_toTopOf="@+id/container_left"
+        app:layout_constraintStart_toStartOf="@+id/container_left"
         android:layout_margin="8dp" />
 
     <TextView
@@ -98,8 +142,8 @@
         android:textColor="#FFFFFF"
         android:background="#80000000"
         android:padding="4dp"
-        app:layout_constraintTop_toTopOf="@+id/preview_right"
-        app:layout_constraintStart_toStartOf="@+id/preview_right"
+        app:layout_constraintTop_toTopOf="@+id/container_right"
+        app:layout_constraintStart_toStartOf="@+id/container_right"
         android:layout_margin="8dp" />
 
     <!-- 控制面板 -->

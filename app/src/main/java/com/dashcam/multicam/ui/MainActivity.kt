@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.dashcam.multicam.R
+import com.dashcam.multicam.model.CameraPosition
 import com.dashcam.multicam.model.RecordingState
 import com.dashcam.multicam.service.RecordingService
 import kotlinx.coroutines.flow.collect
@@ -44,6 +45,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var previewRear: PreviewView
     private lateinit var previewLeft: PreviewView
     private lateinit var previewRight: PreviewView
+    private lateinit var watermarkFront: WatermarkOverlayView
+    private lateinit var watermarkRear: WatermarkOverlayView
+    private lateinit var watermarkLeft: WatermarkOverlayView
+    private lateinit var watermarkRight: WatermarkOverlayView
     private lateinit var btnStartStop: Button
     private lateinit var btnProtect: Button
     private lateinit var btnSettings: Button
@@ -106,6 +111,10 @@ class MainActivity : AppCompatActivity() {
         previewRear = findViewById(R.id.preview_rear)
         previewLeft = findViewById(R.id.preview_left)
         previewRight = findViewById(R.id.preview_right)
+        watermarkFront = findViewById(R.id.watermark_front)
+        watermarkRear = findViewById(R.id.watermark_rear)
+        watermarkLeft = findViewById(R.id.watermark_left)
+        watermarkRight = findViewById(R.id.watermark_right)
         btnStartStop = findViewById(R.id.btn_start_stop)
         btnProtect = findViewById(R.id.btn_protect)
         btnSettings = findViewById(R.id.btn_settings)
@@ -237,6 +246,46 @@ class MainActivity : AppCompatActivity() {
                         GPS: ${String.format("%.6f", it.latitude)}, ${String.format("%.6f", it.longitude)}
                         速度: ${String.format("%.1f", it.speed * 3.6f)} km/h
                     """.trimIndent()
+                }
+            }
+        }
+
+        // 监听水印配置
+        lifecycleScope.launch {
+            recordingService?.getWatermarkManager()?.watermarkConfig?.collect { config ->
+                watermarkFront.updateConfig(config)
+                watermarkRear.updateConfig(config)
+                watermarkLeft.updateConfig(config)
+                watermarkRight.updateConfig(config)
+            }
+        }
+
+        // 监听水印数据并更新各个摄像头水印
+        lifecycleScope.launch {
+            recordingService?.getWatermarkManager()?.watermarkData?.collect { dataMap ->
+                dataMap[CameraPosition.FRONT]?.let { data ->
+                    val config = recordingService?.getWatermarkManager()?.getCurrentConfig()
+                    config?.let {
+                        watermarkFront.updateText(data.formatText(it))
+                    }
+                }
+                dataMap[CameraPosition.REAR]?.let { data ->
+                    val config = recordingService?.getWatermarkManager()?.getCurrentConfig()
+                    config?.let {
+                        watermarkRear.updateText(data.formatText(it))
+                    }
+                }
+                dataMap[CameraPosition.LEFT]?.let { data ->
+                    val config = recordingService?.getWatermarkManager()?.getCurrentConfig()
+                    config?.let {
+                        watermarkLeft.updateText(data.formatText(it))
+                    }
+                }
+                dataMap[CameraPosition.RIGHT]?.let { data ->
+                    val config = recordingService?.getWatermarkManager()?.getCurrentConfig()
+                    config?.let {
+                        watermarkRight.updateText(data.formatText(it))
+                    }
                 }
             }
         }
