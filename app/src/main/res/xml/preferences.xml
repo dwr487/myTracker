@@ -89,6 +89,61 @@
     </PreferenceCategory>
 
     <PreferenceCategory
+        android:title="水印设置">
+
+        <SwitchPreference
+            android:key="watermark_enabled"
+            android:title="启用水印"
+            android:summary="在视频上显示水印信息"
+            android:defaultValue="true" />
+
+        <SwitchPreference
+            android:key="watermark_show_timestamp"
+            android:title="显示时间戳"
+            android:summary="在水印中显示日期和时间"
+            android:defaultValue="true"
+            android:dependency="watermark_enabled" />
+
+        <SwitchPreference
+            android:key="watermark_show_gps"
+            android:title="显示GPS坐标"
+            android:summary="在水印中显示GPS位置"
+            android:defaultValue="true"
+            android:dependency="watermark_enabled" />
+
+        <SwitchPreference
+            android:key="watermark_show_speed"
+            android:title="显示速度"
+            android:summary="在水印中显示当前速度"
+            android:defaultValue="true"
+            android:dependency="watermark_enabled" />
+
+        <SwitchPreference
+            android:key="watermark_show_camera_name"
+            android:title="显示摄像头名称"
+            android:summary="在水印中显示摄像头位置（前/后/左/右）"
+            android:defaultValue="true"
+            android:dependency="watermark_enabled" />
+
+        <EditTextPreference
+            android:key="watermark_custom_text"
+            android:title="自定义文本"
+            android:summary="在水印中显示自定义文本（如车牌号）"
+            android:defaultValue=""
+            android:dependency="watermark_enabled" />
+
+        <ListPreference
+            android:key="watermark_position"
+            android:title="水印位置"
+            android:summary="设置水印在屏幕上的位置"
+            android:entries="@array/watermark_position_entries"
+            android:entryValues="@array/watermark_position_values"
+            android:defaultValue="TOP_LEFT"
+            android:dependency="watermark_enabled" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
         android:title="系统设置">
 
         <SwitchPreference

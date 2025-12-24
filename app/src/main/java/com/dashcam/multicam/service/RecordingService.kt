@@ -31,6 +31,7 @@ class RecordingService : Service() {
     private lateinit var storageManager: StorageManager
     private lateinit var gpsManager: GpsManager
     private lateinit var sensorManager: SensorManager
+    private lateinit var watermarkManager: WatermarkManager
 
     private val videoRecorders = mutableMapOf<CameraPosition, VideoRecorder>()
 
@@ -60,6 +61,7 @@ class RecordingService : Service() {
         storageManager = StorageManager(this)
         gpsManager = GpsManager(this)
         sensorManager = SensorManager(this)
+        watermarkManager = WatermarkManager(this)
 
         // 初始化摄像头
         multiCameraManager.initialize()
@@ -76,6 +78,13 @@ class RecordingService : Service() {
             sensorManager.collisionDetected.collect { sensorData ->
                 Log.w(TAG, "检测到碰撞，保护当前视频片段")
                 protectCurrentSegments()
+            }
+        }
+
+        // 监听GPS数据并更新水印
+        serviceScope.launch {
+            gpsManager.gpsData.collect { gpsData ->
+                watermarkManager.updateGpsDataForAll(gpsData)
             }
         }
 
@@ -268,6 +277,11 @@ class RecordingService : Service() {
      * 获取摄像头管理器
      */
     fun getCameraManager(): MultiCameraManager = multiCameraManager
+
+    /**
+     * 获取水印管理器
+     */
+    fun getWatermarkManager(): WatermarkManager = watermarkManager
 
     override fun onDestroy() {
         super.onDestroy()

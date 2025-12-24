@@ -47,4 +47,18 @@
         <item>180</item>
         <item>300</item>
     </string-array>
+
+    <!-- 水印位置选项 -->
+    <string-array name="watermark_position_entries">
+        <item>左上角</item>
+        <item>右上角</item>
+        <item>左下角</item>
+        <item>右下角</item>
+    </string-array>
+    <string-array name="watermark_position_values">
+        <item>TOP_LEFT</item>
+        <item>TOP_RIGHT</item>
+        <item>BOTTOM_LEFT</item>
+        <item>BOTTOM_RIGHT</item>
+    </string-array>
 </resources>

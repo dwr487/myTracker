@@ -28,6 +28,14 @@
 - 可配置最小保留空间
 - 分类存储（普通/保护）
 
+### 🎨 视频水印
+- 实时叠加水印到视频预览
+- 显示时间戳、GPS坐标、速度、方向
+- 显示摄像头位置标识
+- 支持自定义文本（如车牌号）
+- 四种位置选择（左上/右上/左下/右下）
+- 可配置显示项目和样式
+
 ### 🎯 其他特性
 - 四分屏实时预览
 - 前台服务持续录制
@@ -48,18 +56,21 @@
 ```
 app/src/main/java/com/dashcam/multicam/
 ├── model/              # 数据模型
-│   └── CameraConfig.kt        # 摄像头配置、GPS数据、传感器数据
+│   ├── CameraConfig.kt        # 摄像头配置、GPS数据、传感器数据
+│   └── WatermarkConfig.kt     # 水印配置和数据模型
 ├── manager/            # 管理器
 │   ├── MultiCameraManager.kt  # 多摄像头管理
 │   ├── StorageManager.kt      # 存储管理
 │   ├── GpsManager.kt          # GPS管理
-│   └── SensorManager.kt       # 传感器管理
+│   ├── SensorManager.kt       # 传感器管理
+│   └── WatermarkManager.kt    # 水印管理
 ├── service/            # 服务
 │   ├── RecordingService.kt    # 录制服务
 │   └── BootReceiver.kt        # 开机自启动
 ├── ui/                 # 用户界面
 │   ├── MainActivity.kt        # 主界面
-│   └── SettingsActivity.kt    # 设置界面
+│   ├── SettingsActivity.kt    # 设置界面
+│   └── WatermarkOverlayView.kt # 水印叠加视图
 └── utils/              # 工具类
     └── VideoRecorder.kt       # 视频录制器
 ```
@@ -132,6 +143,15 @@ app/src/main/java/com/dashcam/multicam/
 - **启用碰撞检测**：开启/关闭碰撞检测
 - **灵敏度**：调整检测灵敏度
 
+#### 水印设置
+- **启用水印**：是否在视频上显示水印
+- **显示时间戳**：在水印中显示日期和时间
+- **显示GPS坐标**：在水印中显示位置信息
+- **显示速度**：在水印中显示当前速度
+- **显示摄像头名称**：标识视频来源（前/后/左/右）
+- **自定义文本**：添加自定义文本（如车牌号）
+- **水印位置**：选择水印显示位置（左上/右上/左下/右下）
+
 #### 系统设置
 - **开机自启动**：系统启动时自动开始录制
 - **保持屏幕常亮**：录制时保持屏幕开启
@@ -199,7 +219,7 @@ GPS数据包含：
 - [ ] AI事件检测（行人、车辆等）
 - [ ] 夜间模式优化
 - [ ] 停车监控模式
-- [ ] 视频水印（时间、GPS、速度）
+- [ ] 将水印直接编码到视频文件中
 - [ ] H.265编码支持
 - [ ] Wi-Fi文件传输
 
