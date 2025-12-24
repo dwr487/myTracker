@@ -70,6 +70,9 @@ dependencies {
     // Preferences
     implementation 'androidx.preference:preference-ktx:1.2.1'
 
+    // FFmpegKit for video watermarking
+    implementation 'com.arthenica:ffmpeg-kit-min:6.0-2'
+
     // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

@@ -39,7 +39,12 @@ class RecordingService : Service() {
     val recordingState: StateFlow<RecordingState> = _recordingState.asStateFlow()
 
     private var segmentJob: Job? = null
+    private var watermarkCollectionJob: Job? = null
     private var currentSegmentFiles = mutableMapOf<CameraPosition, File>()
+
+    // 动态水印生成器（每个摄像头一个）
+    private val watermarkGenerators = mutableMapOf<CameraPosition, com.dashcam.multicam.utils.DynamicWatermarkGenerator>()
+    private var segmentStartTimeMs = 0L  // 当前段开始的时间戳
 
     companion object {
         private const val TAG = "RecordingService"
@@ -123,10 +128,16 @@ class RecordingService : Service() {
                 val cameras = multiCameraManager.getAvailableCameras()
                 Log.d(TAG, "开始录制 ${cameras.size} 个摄像头")
 
-                // 为每个摄像头创建录制器
+                // 为每个摄像头创建录制器和水印生成器
                 cameras.forEach { config ->
                     val recorder = VideoRecorder(this@RecordingService, config)
                     videoRecorders[config.position] = recorder
+
+                    // 创建动态水印生成器
+                    val watermarkGenerator = com.dashcam.multicam.utils.DynamicWatermarkGenerator(
+                        watermarkManager.getCurrentConfig()
+                    )
+                    watermarkGenerators[config.position] = watermarkGenerator
                 }
 
                 // 开始第一个片段
@@ -134,6 +145,9 @@ class RecordingService : Service() {
 
                 // 启动分段录制
                 startSegmentRecording()
+
+                // 启动水印数据收集
+                startWatermarkDataCollection()
 
                 updateNotification("正在录制 - ${cameras.size}个摄像头")
 
@@ -158,11 +172,17 @@ class RecordingService : Service() {
                 // 停止分段录制
                 segmentJob?.cancel()
 
+                // 停止水印数据收集
+                watermarkCollectionJob?.cancel()
+
                 // 停止所有录制器
                 videoRecorders.values.forEach { recorder ->
                     recorder.stopRecording()
                 }
                 videoRecorders.clear()
+
+                // 清理水印生成器
+                watermarkGenerators.clear()
 
                 _recordingState.value = RecordingState.IDLE
                 updateNotification("录制已停止")
@@ -185,9 +205,38 @@ class RecordingService : Service() {
             }
         }
 
+        // 处理已录制完成的视频片段
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val shouldBurnWatermark = prefs.getBoolean("watermark_burn_to_video", false)
+        val shouldGenerateSubtitle = prefs.getBoolean("watermark_generate_subtitle", true)
+
+        if (watermarkManager.getCurrentConfig().enabled && currentSegmentFiles.isNotEmpty()) {
+            withContext(Dispatchers.IO) {
+                currentSegmentFiles.forEach { (position, file) ->
+                    if (file.exists()) {
+                        // 烧录动态水印到视频（如果启用）
+                        if (shouldBurnWatermark) {
+                            burnDynamicWatermarkToVideo(file, position)
+                        }
+
+                        // 生成字幕文件（如果启用）
+                        if (shouldGenerateSubtitle && !shouldBurnWatermark) {
+                            generateSubtitleForVideo(file, position)
+                        }
+                    }
+                }
+            }
+        }
+
         // 停止当前片段
         videoRecorders.values.forEach { it.stopRecording() }
         currentSegmentFiles.clear()
+
+        // 清空当前段的水印数据，准备收集新段的数据
+        watermarkGenerators.values.forEach { it.clear() }
+
+        // 记录新段开始时间
+        segmentStartTimeMs = System.currentTimeMillis()
 
         // 开始新片段
         videoRecorders.forEach { (position, recorder) ->
@@ -196,6 +245,118 @@ class RecordingService : Service() {
             recorder.startRecording(file)
             Log.d(TAG, "开始录制新片段: ${position.displayName} -> ${file.name}")
         }
+    }
+
+    /**
+     * 将动态水印烧录到视频（使用ASS字幕）
+     */
+    private fun burnDynamicWatermarkToVideo(videoFile: File, position: CameraPosition) {
+        try {
+            val generator = watermarkGenerators[position]
+            if (generator == null) {
+                Log.w(TAG, "未找到水印生成器: $position")
+                return
+            }
+
+            if (generator.getDataPointCount() == 0) {
+                Log.w(TAG, "没有水印数据: $position")
+                return
+            }
+
+            // 生成ASS字幕文件
+            val assFile = File(videoFile.parent, "${videoFile.nameWithoutExtension}.ass")
+            val burner = com.dashcam.multicam.utils.DynamicWatermarkBurner()
+
+            Log.d(TAG, "开始烧录动态水印: ${videoFile.name}")
+            Log.d(TAG, "水印数据点: ${generator.getDataPointCount()}")
+
+            // 获取视频时长
+            val videoDuration = burner.getVideoDuration(videoFile)
+            if (videoDuration <= 0) {
+                Log.e(TAG, "无法获取视频时长: ${videoFile.name}")
+                return
+            }
+
+            // 生成ASS文件
+            if (!generator.generateASSFile(assFile, videoDuration)) {
+                Log.e(TAG, "生成ASS文件失败: ${videoFile.name}")
+                return
+            }
+
+            // 创建临时输出文件
+            val tempFile = File(videoFile.parent, "${videoFile.nameWithoutExtension}_temp.mp4")
+
+            // 烧录水印
+            if (burner.burnWatermark(videoFile, assFile, tempFile)) {
+                // 替换原文件
+                if (tempFile.exists() && tempFile.length() > 0) {
+                    videoFile.delete()
+                    if (tempFile.renameTo(videoFile)) {
+                        Log.d(TAG, "动态水印烧录成功: ${videoFile.name}")
+                        // 删除ASS文件（可选：也可以保留）
+                        assFile.delete()
+                    } else {
+                        Log.e(TAG, "重命名文件失败")
+                        tempFile.delete()
+                    }
+                } else {
+                    Log.e(TAG, "临时文件无效")
+                    tempFile.delete()
+                }
+            } else {
+                Log.e(TAG, "烧录动态水印失败: ${videoFile.name}")
+                tempFile.delete()
+                assFile.delete()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "烧录动态水印异常: ${videoFile.name}", e)
+        }
+    }
+
+    /**
+     * 为视频生成字幕文件
+     */
+    private fun generateSubtitleForVideo(videoFile: File, position: CameraPosition) {
+        try {
+            val watermarkData = watermarkManager.getWatermarkData(position)
+            val generator = com.dashcam.multicam.utils.WatermarkSubtitleGenerator(
+                watermarkManager.getCurrentConfig()
+            )
+            generator.createSubtitleForVideo(videoFile, watermarkData, SEGMENT_DURATION_MS)
+            Log.d(TAG, "字幕文件已生成: ${videoFile.nameWithoutExtension}.srt")
+        } catch (e: Exception) {
+            Log.e(TAG, "生成字幕文件失败: ${videoFile.name}", e)
+        }
+    }
+
+    /**
+     * 启动水印数据收集
+     * 每秒收集一次当前的GPS和时间数据
+     */
+    private fun startWatermarkDataCollection() {
+        watermarkCollectionJob = serviceScope.launch {
+            while (isActive) {
+                try {
+                    // 计算当前视频时间戳（从段开始的偏移量）
+                    val currentTimeMs = System.currentTimeMillis() - segmentStartTimeMs
+
+                    // 为每个摄像头位置添加水印数据
+                    watermarkGenerators.forEach { (position, generator) ->
+                        val watermarkData = watermarkManager.getWatermarkData(position)
+                        generator.addDataPoint(currentTimeMs, watermarkData)
+                    }
+
+                    Log.v(TAG, "已收集水印数据，视频时间: ${currentTimeMs}ms")
+
+                } catch (e: Exception) {
+                    Log.e(TAG, "收集水印数据失败", e)
+                }
+
+                // 每秒收集一次
+                delay(1000)
+            }
+        }
+        Log.d(TAG, "水印数据收集已启动")
     }
 
     /**
