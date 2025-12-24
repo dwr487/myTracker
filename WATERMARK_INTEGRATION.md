@@ -1,237 +1,340 @@
-# 水印烧录到视频流集成指南
+# 动态水印烧录到视频流集成指南
 
 ## 法规要求说明
 
-根据法规要求，水印信息必须直接烧录到视频流中，而不能使用外部字幕文件。本文档提供两种集成方案。
+根据法规要求，行车记录仪的水印信息必须：
+1. **直接烧录到视频流中**，不能使用外部字幕文件
+2. **动态显示实时信息**，包括每秒变化的时间戳、GPS坐标、速度等
+3. **无法移除或篡改**，确保视频证据的完整性
 
-## 方案一：FFmpeg集成（推荐）
+本项目实现了完整的动态水印烧录方案，满足所有法规要求。
 
-### 1. 添加FFmpeg依赖
+## 技术方案：ASS字幕 + FFmpeg烧录
+
+### 核心思路
+
+1. **实时数据采集**：录制过程中每秒记录当前的GPS和时间数据
+2. **ASS字幕生成**：将每秒的数据保存为ASS格式字幕文件
+3. **FFmpeg烧录**：使用FFmpeg的`ass`滤镜将字幕永久烧录到视频中
+4. **动态效果**：视频播放时，水印内容每秒自动更新
+
+### 为什么选择这个方案？
+
+- ✅ **真正的动态水印**：每秒都可以显示不同的GPS和时间信息
+- ✅ **性能优越**：后处理方式不影响录制稳定性
+- ✅ **高质量输出**：FFmpeg提供专业级视频处理能力
+- ✅ **灵活配置**：支持自定义水印样式、位置、颜色
+- ✅ **法规合规**：水印永久嵌入，无法移除
+
+## 实现详解
+
+### 1. 添加FFmpegKit依赖
 
 在 `app/build.gradle` 中添加：
 
 ```gradle
 dependencies {
-    // FFmpeg for Android
-    implementation 'com.arthenica:mobile-ffmpeg-full:4.4.LTS'
-    // 或使用更新的FFmpegKit
-    implementation 'com.arthenica:ffmpeg-kit-full:5.1'
+    // FFmpegKit for video watermarking
+    implementation 'com.arthenica:ffmpeg-kit-min:6.0-2'
 }
 ```
 
-### 2. 创建FFmpeg水印烧录器
+### 2. 动态水印数据生成器
+
+创建 `DynamicWatermarkGenerator.kt`，负责收集和生成ASS字幕文件：
 
 ```kotlin
-package com.dashcam.multicam.utils
-
-import android.util.Log
-import com.arthenica.ffmpegkit.FFmpegKit
-import com.arthenica.ffmpegkit.ReturnCode
-import com.dashcam.multicam.model.WatermarkConfig
-import com.dashcam.multicam.model.WatermarkData
-import java.io.File
-
-class FFmpegWatermarkBurner(
+class DynamicWatermarkGenerator(
     private val watermarkConfig: WatermarkConfig
 ) {
+    private val watermarkDataPoints = mutableListOf<TimedWatermarkData>()
 
-    companion object {
-        private const val TAG = "FFmpegWatermarkBurner"
+    data class TimedWatermarkData(
+        val timestampSeconds: Int,  // 视频中的秒数
+        val watermarkData: WatermarkData
+    )
+
+    /**
+     * 添加一个时间点的水印数据
+     */
+    fun addDataPoint(videoTimestampMs: Long, watermarkData: WatermarkData) {
+        val seconds = (videoTimestampMs / 1000).toInt()
+        if (watermarkDataPoints.none { it.timestampSeconds == seconds }) {
+            watermarkDataPoints.add(
+                TimedWatermarkData(seconds, watermarkData.copy())
+            )
+        }
     }
 
     /**
-     * 将水印烧录到视频中
+     * 生成ASS字幕文件
+     */
+    fun generateASSFile(outputFile: File, videoDurationMs: Long): Boolean {
+        // 生成ASS文件头
+        // 写入每秒的水印事件
+        // 详细实现见项目源码
+    }
+}
+```
+
+**关键点**：
+- 每秒记录一次数据点，包含时间戳和GPS信息
+- ASS格式支持丰富的样式（颜色、位置、字体等）
+- 每个数据点对应视频中的一秒
+
+### 3. 动态水印烧录器
+
+创建 `DynamicWatermarkBurner.kt`，使用FFmpeg烧录ASS字幕：
+
+```kotlin
+class DynamicWatermarkBurner {
+    /**
+     * 将ASS字幕烧录到视频中
      */
     fun burnWatermark(
-        inputFile: File,
-        outputFile: File,
-        watermarkData: WatermarkData
+        inputVideo: File,
+        inputASS: File,
+        outputVideo: File
     ): Boolean {
-        if (!watermarkConfig.enabled) {
-            return false
-        }
-
-        // 构建水印文本
-        val watermarkText = buildWatermarkText(watermarkData)
-
-        // 确定水印位置
-        val position = when (watermarkConfig.position) {
-            WatermarkPosition.TOP_LEFT -> "x=10:y=10"
-            WatermarkPosition.TOP_RIGHT -> "x=w-tw-10:y=10"
-            WatermarkPosition.BOTTOM_LEFT -> "x=10:y=h-th-10"
-            WatermarkPosition.BOTTOM_RIGHT -> "x=w-tw-10:y=h-th-10"
-        }
-
-        // 构建FFmpeg命令
-        val command = buildString {
-            append("-i ${inputFile.absolutePath} ")
-            append("-vf \"")
-            append("drawtext=")
-            append("text='$watermarkText':")
-            append("fontsize=${watermarkConfig.textSize * 2}:")
-            append("fontcolor=white:")
-            append("box=1:")
-            append("boxcolor=black@0.5:")
-            append("boxborderw=5:")
-            append("$position")
-            append("\" ")
-            append("-c:a copy ")  // 复制音频流
-            append("-y ")  // 覆盖输出文件
-            append(outputFile.absolutePath)
-        }
-
-        Log.d(TAG, "执行FFmpeg命令: $command")
-
-        // 执行FFmpeg命令
+        val command = buildFFmpegCommand(inputVideo, inputASS, outputVideo)
         val session = FFmpegKit.execute(command)
+        return ReturnCode.isSuccess(session.returnCode)
+    }
 
-        return if (ReturnCode.isSuccess(session.returnCode)) {
-            Log.d(TAG, "水印烧录成功")
-            true
-        } else {
-            Log.e(TAG, "水印烧录失败: ${session.failStackTrace}")
-            false
+    private fun buildFFmpegCommand(
+        inputVideo: File,
+        inputASS: File,
+        outputVideo: File
+    ): String {
+        val assPath = inputASS.absolutePath
+            .replace("\\", "\\\\")
+            .replace(":", "\\:")
+
+        return "-i \"${inputVideo.absolutePath}\" " +
+                "-vf \"ass='$assPath'\" " +
+                "-c:v libx264 " +
+                "-preset medium " +
+                "-crf 23 " +
+                "-c:a copy " +
+                "-y " +
+                "\"${outputVideo.absolutePath}\""
+    }
+}
+```
+
+**FFmpeg命令说明**：
+- `-i`: 输入视频文件
+- `-vf "ass='path'"`: 使用ass滤镜烧录字幕
+- `-c:v libx264`: 使用H.264编码
+- `-preset medium`: 编码速度和质量的平衡
+- `-crf 23`: 质量参数（18-28，越小质量越好）
+- `-c:a copy`: 音频直接复制，不重新编码
+
+### 4. 在RecordingService中集成
+
+修改 `RecordingService.kt`：
+
+```kotlin
+class RecordingService : Service() {
+    // 为每个摄像头创建动态水印生成器
+    private val watermarkGenerators = mutableMapOf<CameraPosition, DynamicWatermarkGenerator>()
+    private var watermarkCollectionJob: Job? = null
+    private var segmentStartTimeMs = 0L
+
+    /**
+     * 启动水印数据收集（每秒收集一次）
+     */
+    private fun startWatermarkDataCollection() {
+        watermarkCollectionJob = serviceScope.launch {
+            while (isActive) {
+                val currentTimeMs = System.currentTimeMillis() - segmentStartTimeMs
+
+                watermarkGenerators.forEach { (position, generator) ->
+                    val watermarkData = watermarkManager.getWatermarkData(position)
+                    generator.addDataPoint(currentTimeMs, watermarkData)
+                }
+
+                delay(1000)  // 每秒收集一次
+            }
         }
     }
 
     /**
-     * 构建水印文本
+     * 烧录动态水印到视频
      */
-    private fun buildWatermarkText(data: WatermarkData): String {
-        val lines = data.formatText(watermarkConfig)
-        return lines.joinToString("\\n")
-            .replace("'", "\\'")  // 转义单引号
-    }
-}
-```
+    private fun burnDynamicWatermarkToVideo(videoFile: File, position: CameraPosition) {
+        val generator = watermarkGenerators[position] ?: return
 
-### 3. 在RecordingService中集成
+        // 生成ASS字幕文件
+        val assFile = File(videoFile.parent, "${videoFile.nameWithoutExtension}.ass")
+        val burner = DynamicWatermarkBurner()
 
-```kotlin
-// 在RecordingService.kt中添加
-private fun processVideoWithWatermark(videoFile: File, position: CameraPosition) {
-    val prefs = PreferenceManager.getDefaultSharedPreferences(this)
-    val burnWatermark = prefs.getBoolean("watermark_burn_to_video", true)
+        val videoDuration = burner.getVideoDuration(videoFile)
+        generator.generateASSFile(assFile, videoDuration)
 
-    if (!burnWatermark) return
-
-    serviceScope.launch(Dispatchers.IO) {
-        try {
-            val tempFile = File(videoFile.parent, "${videoFile.nameWithoutExtension}_temp.mp4")
-            val watermarkData = watermarkManager.getWatermarkData(position)
-            val burner = FFmpegWatermarkBurner(watermarkManager.getCurrentConfig())
-
-            if (burner.burnWatermark(videoFile, tempFile, watermarkData)) {
-                // 替换原文件
-                videoFile.delete()
-                tempFile.renameTo(videoFile)
-                Log.d(TAG, "视频水印烧录完成: ${videoFile.name}")
-            } else {
-                tempFile.delete()
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "烧录水印失败", e)
+        // 烧录水印
+        val tempFile = File(videoFile.parent, "${videoFile.nameWithoutExtension}_temp.mp4")
+        if (burner.burnWatermark(videoFile, assFile, tempFile)) {
+            videoFile.delete()
+            tempFile.renameTo(videoFile)
+            assFile.delete()  // 清理临时ASS文件
         }
     }
 }
 ```
 
-### 4. 更新设置界面
+## 工作流程
 
-在 `preferences.xml` 中添加：
+### 录制阶段
 
-```xml
-<SwitchPreference
-    android:key="watermark_burn_to_video"
-    android:title="烧录水印到视频"
-    android:summary="将水印永久写入视频文件（需要额外处理时间）"
-    android:defaultValue="true"
-    android:dependency="watermark_enabled" />
+1. 开始录制时，为每个摄像头创建 `DynamicWatermarkGenerator`
+2. 启动数据收集协程，每秒执行一次：
+   - 获取当前GPS数据（坐标、速度、方向）
+   - 获取当前时间戳
+   - 计算视频时间偏移量
+   - 添加数据点到生成器
+3. 录制正常进行，不受水印收集影响
+
+### 段落结束阶段
+
+1. 停止当前段的录制
+2. 为每个摄像头的视频：
+   - 调用 `generateASSFile()` 生成ASS字幕文件
+   - 调用 `burnWatermark()` 使用FFmpeg烧录水印
+   - 替换原视频文件
+   - 清理临时文件
+3. 清空水印数据，准备下一段
+4. 开始录制新段
+
+## ASS字幕文件示例
+
+```ass
+[Script Info]
+Title: Dashcam Watermark
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, ...
+Style: WatermarkStyle,Arial,28,&H00FFFFFF,...
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:01.00,WatermarkStyle,,0,0,0,,2024-12-24 10:30:00\NGPS: 39.904202, 116.407394\N速度: 45.2 km/h\NFRONT
+Dialogue: 0,0:00:01.00,0:00:02.00,WatermarkStyle,,0,0,0,,2024-12-24 10:30:01\NGPS: 39.904215, 116.407402\N速度: 46.1 km/h\NFRONT
+Dialogue: 0,0:00:02.00,0:00:03.00,WatermarkStyle,,0,0,0,,2024-12-24 10:30:02\NGPS: 39.904228, 116.407410\N速度: 47.3 km/h\NFRONT
+...
 ```
 
-## 方案二：MediaCodec实时烧录（高级）
+**说明**：
+- 每秒一个Dialogue事件
+- 时间戳、GPS、速度每秒都在变化
+- 使用`\N`换行符分隔多行文本
+- 样式统一定义在Style部分
 
-### 优势
-- 实时处理，无需后期处理
-- 不需要额外存储空间
+## 性能优化
 
-### 劣势
-- 实现复杂
-- 性能开销大
-- 可能影响录制稳定性
+### 1. 数据采集优化
+- 采用异步协程，不阻塞录制线程
+- 每秒采集1次，平衡精度和性能
+- 自动去重，避免重复数据
 
-### 实现步骤
-
-1. **使用Camera2 API + MediaCodec**
-   - 创建自定义Surface用于绘制
-   - 使用OpenGL ES进行帧处理
-   - 在每一帧上绘制水印
-
-2. **核心代码框架**
-
+### 2. FFmpeg处理优化
 ```kotlin
-// 创建OpenGL渲染器
-class WatermarkRenderer(
-    private val watermarkConfig: WatermarkConfig
-) : GLSurfaceView.Renderer {
+// 使用medium预设，平衡速度和质量
+"-preset medium"
 
-    override fun onDrawFrame(gl: GL10?) {
-        // 1. 绘制摄像头帧
-        // 2. 叠加水印纹理
-        // 3. 输出到编码器
-    }
-}
+// 音频直接复制，不重新编码
+"-c:a copy"
 
-// 使用MediaCodec录制
-class RealtimeWatermarkRecorder {
-    private fun setupEncoder() {
-        // 配置MediaCodec
-        // 创建InputSurface
-        // 将Surface传给OpenGL渲染器
-    }
-}
+// 合理的CRF值，保证质量
+"-crf 23"
 ```
 
-这种方案需要深入的OpenGL ES和MediaCodec知识，建议使用方案一。
+### 3. 资源管理
+- 及时清理临时ASS文件
+- 使用临时文件避免破坏原视频
+- 分段处理，避免内存占用过大
 
-## 方案对比
+## 测试验证
 
-| 特性 | FFmpeg方案 | MediaCodec实时 |
-|------|-----------|----------------|
-| 实现难度 | 简单 | 复杂 |
-| 性能影响 | 后处理 | 实时影响 |
-| 稳定性 | 高 | 中 |
-| 额外存储 | 需要临时空间 | 不需要 |
-| 推荐度 | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ |
+### 1. 功能测试
+```kotlin
+// 验证数据采集
+assertEquals(60, generator.getDataPointCount())  // 60秒的视频
 
-## 推荐配置
+// 验证ASS文件生成
+assertTrue(assFile.exists())
+assertTrue(assFile.length() > 0)
 
-### 分段处理策略
-1. 录制视频时先不添加水印
-2. 录制完每个分段后，立即在后台用FFmpeg处理
-3. 处理完成后替换原文件
-4. 使用队列管理，避免多个任务并发
+// 验证FFmpeg烧录
+assertTrue(burner.burnWatermark(input, ass, output))
+assertTrue(output.exists())
+```
 
-### 性能优化
-1. 使用低优先级后台线程
-2. 仅在存储空间充足时处理
-3. 可选择在充电时批量处理
-4. 保留原始视频作为备份（可选）
+### 2. 播放验证
+1. 使用VLC Player打开生成的视频
+2. 确认水印显示在正确位置
+3. 快进播放，验证时间戳每秒变化
+4. 验证GPS坐标随车辆移动而变化
+5. 确认水印无法通过播放器禁用
 
-## 法规符合性
+### 3. 质量检查
+```bash
+# 检查视频编码信息
+ffprobe output.mp4
 
-使用FFmpeg方案烧录水印后：
-- ✅ 水印永久嵌入视频流
-- ✅ 无法移除或禁用
-- ✅ 在任何播放器中都可见
-- ✅ 符合法规要求
+# 验证水印是否烧录（不应有字幕流）
+ffprobe -show_streams output.mp4 | grep codec_type
+```
 
-## 集成检查清单
+## 常见问题
 
-- [ ] 添加FFmpegKit依赖
-- [ ] 实现FFmpegWatermarkBurner类
-- [ ] 集成到RecordingService
-- [ ] 添加设置选项
-- [ ] 测试烧录功能
-- [ ] 测试性能影响
-- [ ] 验证法规符合性
+### Q1: 水印延迟或不同步？
+A: 检查 `segmentStartTimeMs` 的初始化时机，确保在开始录制时正确设置。
+
+### Q2: ASS文件路径包含特殊字符？
+A: 使用路径转义：
+```kotlin
+val assPath = inputASS.absolutePath
+    .replace("\\", "\\\\")
+    .replace(":", "\\:")
+```
+
+### Q3: FFmpeg处理速度太慢？
+A: 调整preset：
+- `ultrafast`: 最快，质量较低
+- `medium`: 平衡（推荐）
+- `slow`: 质量最好，速度慢
+
+### Q4: 内存占用过高？
+A: 确保及时清理：
+```kotlin
+watermarkGenerators.values.forEach { it.clear() }
+```
+
+## 合规性说明
+
+本实现满足以下法规要求：
+
+✅ **水印嵌入视频流**：使用FFmpeg的ass滤镜将字幕永久烧录到视频中
+
+✅ **动态实时信息**：每秒记录和显示当前的GPS、时间、速度等信息
+
+✅ **无法移除**：水印已成为视频像素的一部分，无法分离
+
+✅ **准确性**：GPS和时间戳直接来自系统传感器，精确到秒
+
+✅ **完整性**：每段视频都包含完整的水印数据
+
+## 总结
+
+本方案通过以下技术实现了法规要求的动态水印：
+
+1. **实时数据采集**：每秒记录GPS和时间
+2. **ASS字幕格式**：灵活且功能强大
+3. **FFmpeg烧录**：专业且高效
+4. **自动化处理**：无需人工干预
+
+相比实时编码方案，本方案具有更好的稳定性和可维护性，同时完全满足法规对动态水印的要求。
