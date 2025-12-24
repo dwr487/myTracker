@@ -185,6 +185,20 @@ class RecordingService : Service() {
             }
         }
 
+        // 为当前片段生成字幕文件（如果启用）
+        val prefs = androidx.preference.PreferenceManager.getDefaultSharedPreferences(this)
+        val shouldGenerateSubtitle = prefs.getBoolean("watermark_generate_subtitle", true)
+
+        if (watermarkManager.getCurrentConfig().enabled && shouldGenerateSubtitle) {
+            withContext(Dispatchers.IO) {
+                currentSegmentFiles.forEach { (position, file) ->
+                    if (file.exists()) {
+                        generateSubtitleForVideo(file, position)
+                    }
+                }
+            }
+        }
+
         // 停止当前片段
         videoRecorders.values.forEach { it.stopRecording() }
         currentSegmentFiles.clear()
@@ -195,6 +209,22 @@ class RecordingService : Service() {
             currentSegmentFiles[position] = file
             recorder.startRecording(file)
             Log.d(TAG, "开始录制新片段: ${position.displayName} -> ${file.name}")
+        }
+    }
+
+    /**
+     * 为视频生成字幕文件
+     */
+    private fun generateSubtitleForVideo(videoFile: File, position: CameraPosition) {
+        try {
+            val watermarkData = watermarkManager.getWatermarkData(position)
+            val generator = com.dashcam.multicam.utils.WatermarkSubtitleGenerator(
+                watermarkManager.getCurrentConfig()
+            )
+            generator.createSubtitleForVideo(videoFile, watermarkData, SEGMENT_DURATION_MS)
+            Log.d(TAG, "字幕文件已生成: ${videoFile.nameWithoutExtension}.srt")
+        } catch (e: Exception) {
+            Log.e(TAG, "生成字幕文件失败: ${videoFile.name}", e)
         }
     }
 

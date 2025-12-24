@@ -141,6 +141,13 @@
             android:defaultValue="TOP_LEFT"
             android:dependency="watermark_enabled" />
 
+        <SwitchPreference
+            android:key="watermark_generate_subtitle"
+            android:title="生成字幕文件"
+            android:summary="为每个视频生成SRT字幕文件，包含水印信息"
+            android:defaultValue="true"
+            android:dependency="watermark_enabled" />
+
     </PreferenceCategory>
 
     <PreferenceCategory
